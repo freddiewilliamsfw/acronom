@@ -6,7 +6,7 @@
     <title>Frog Acronym Game</title>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/phaser/3.55.2/phaser.min.js"></script>
     <style>
-        body { margin: 0; display: flex; justify-content: center; align-items: center; height: 100vh; background: #f0f0f0; }
+        body { margin: 0; display: flex; justify-content: center; align-items: center; height: 100vh; background: #000; }
     </style>
 </head>
 <body>
@@ -15,6 +15,7 @@
         type: Phaser.AUTO,
         width: 800,
         height: 600,
+        backgroundColor: '#000000',
         scene: {
             preload: preload,
             create: create,
@@ -23,7 +24,7 @@
         physics: {
             default: 'arcade',
             arcade: {
-                gravity: { y: 0 }
+                debug: false
             }
         }
     };
@@ -34,36 +35,41 @@
     let cursors;
     let scoreText;
     let score = 0;
+    let walls;
 
     const ACRONYMS = {
-        'RPM': 'Regional Partner Marketing',
-        'CPU': 'Central Processing Unit',
-        'NASA': 'National Aeronautics and Space Administration',
-        'ASAP': 'As Soon As Possible',
-        'DIY': 'Do It Yourself'
+        'ARK': 'Account Resource Kit',
+        'BIAB': 'Back in a Bit',
+        'CAD': 'Connected Account Detail',
+        'CAS': 'Customer Authentication Service',
+        'CDE': 'Complex Deal Review',
+        'DEB': 'Dashboard Eligible Business'
     };
 
     function preload() {
-        this.load.image('background', 'map.png');
         this.load.image('frog', 'bufo.png');
-        this.load.image('acronym', 'https://examples.phaser.io/assets/sprites/star.png');
     }
 
     function create() {
-        // Add background
-        this.add.image(400, 300, 'background');
+        // Create walls
+        walls = this.physics.add.staticGroup();
+        createMaze(this);
 
+        // Create frog
         frog = this.physics.add.sprite(400, 300, 'frog');
+        frog.setScale(0.25); // Make frog a quarter of the size
         frog.setCollideWorldBounds(true);
 
+        // Create acronyms
         acronyms = this.physics.add.group();
         Object.keys(ACRONYMS).forEach(acronym => {
-            const x = Phaser.Math.Between(50, 750);
-            const y = Phaser.Math.Between(50, 550);
-            const acronymSprite = acronyms.create(x, y, 'acronym');
-            acronymSprite.setData('acronym', acronym);
+            const { x, y } = getRandomPosition(this);
+            const acronymText = this.add.text(x, y, acronym, { fontSize: '16px', fill: '#fff' });
+            acronyms.add(acronymText);
+            acronymText.setData('acronym', acronym);
         });
 
+        this.physics.add.collider(frog, walls);
         this.physics.add.overlap(frog, acronyms, collectAcronym, null, this);
 
         cursors = this.input.keyboard.createCursorKeys();
@@ -72,18 +78,20 @@
     }
 
     function update() {
+        const speed = 160;
+
         if (cursors.left.isDown) {
-            frog.setVelocityX(-160);
+            frog.setVelocityX(-speed);
         } else if (cursors.right.isDown) {
-            frog.setVelocityX(160);
+            frog.setVelocityX(speed);
         } else {
             frog.setVelocityX(0);
         }
 
         if (cursors.up.isDown) {
-            frog.setVelocityY(-160);
+            frog.setVelocityY(-speed);
         } else if (cursors.down.isDown) {
-            frog.setVelocityY(160);
+            frog.setVelocityY(speed);
         } else {
             frog.setVelocityY(0);
         }
@@ -95,18 +103,68 @@
         score += 10;
         scoreText.setText('Score: ' + score);
         
-        this.add.text(400, 300, `${acronymText}: ${ACRONYMS[acronymText]}`, { fontSize: '24px', fill: '#fff' })
+        const expandedText = this.add.text(400, 550, `${acronymText}: ${ACRONYMS[acronymText]}`, { fontSize: '24px', fill: '#fff' })
             .setOrigin(0.5)
             .setDepth(1);
 
         this.time.delayedCall(2000, () => {
             this.tweens.add({
-                targets: this.children.list[this.children.list.length - 1],
+                targets: expandedText,
                 alpha: 0,
                 duration: 1000,
-                ease: 'Power2'
+                ease: 'Power2',
+                onComplete: () => expandedText.destroy()
             });
         });
+    }
+
+    function createMaze(scene) {
+        const mazeLayout = [
+            "XXXXXXXXXXXXXXXXXXXXX",
+            "X         X         X",
+            "X XXX XXX X XXX XXX X",
+            "X X   X   X   X   X X",
+            "X X X X XXXXX X X X X",
+            "X   X X       X X   X",
+            "XXXXX X XXXXX X XXXXX",
+            "X     X   X   X     X",
+            "X XXX XXX X XXX XXX X",
+            "X X     X   X     X X",
+            "X X XXX X X X XXX X X",
+            "X X   X X X X X   X X",
+            "X XXX X X X X X XXX X",
+            "X     X   X   X     X",
+            "XXXXXXXXXXXXXXXXXXXXX"
+        ];
+
+        const tileSize = 40;
+        mazeLayout.forEach((row, y) => {
+            for (let x = 0; x < row.length; x++) {
+                if (row[x] === 'X') {
+                    const wall = scene.add.rectangle(x * tileSize, y * tileSize, tileSize, tileSize, 0x0000FF);
+                    walls.add(wall);
+                }
+            }
+        });
+    }
+
+    function getRandomPosition(scene) {
+        let x, y;
+        do {
+            x = Phaser.Math.Between(0, 19) * 40 + 20;
+            y = Phaser.Math.Between(0, 14) * 40 + 20;
+        } while (isPositionOccupied(scene, x, y));
+        return { x, y };
+    }
+
+    function isPositionOccupied(scene, x, y) {
+        let occupied = false;
+        scene.physics.overlapRect(x-10, y-10, 20, 20, false, true, (obj1, obj2) => {
+            if (obj2.body.immovable) {
+                occupied = true;
+            }
+        });
+        return occupied;
     }
     </script>
 </body>
