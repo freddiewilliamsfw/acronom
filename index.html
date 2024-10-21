@@ -14,7 +14,7 @@
     const config = {
         type: Phaser.AUTO,
         width: 800,
-        height: 600,
+        height: 650, // Increased height to accommodate score outside
         backgroundColor: '#000000',
         scene: {
             preload: preload,
@@ -56,7 +56,7 @@
         createMaze(this);
 
         // Create frog
-        frog = this.physics.add.sprite(400, 300, 'frog');
+        frog = this.physics.add.sprite(40, 40, 'frog');
         frog.setScale(0.25); // Make frog a quarter of the size
         frog.setCollideWorldBounds(true);
 
@@ -66,6 +66,8 @@
             const { x, y } = getRandomPosition(this);
             const acronymText = this.add.text(x, y, acronym, { fontSize: '16px', fill: '#fff' });
             acronyms.add(acronymText);
+            this.physics.add.existing(acronymText);
+            acronymText.body.setSize(acronymText.width, acronymText.height);
             acronymText.setData('acronym', acronym);
         });
 
@@ -74,7 +76,7 @@
 
         cursors = this.input.keyboard.createCursorKeys();
 
-        scoreText = this.add.text(16, 16, 'Score: 0', { fontSize: '32px', fill: '#fff' });
+        scoreText = this.add.text(400, 620, 'Score: 0', { fontSize: '32px', fill: '#fff' }).setOrigin(0.5);
     }
 
     function update() {
@@ -103,7 +105,7 @@
         score += 10;
         scoreText.setText('Score: ' + score);
         
-        const expandedText = this.add.text(400, 550, `${acronymText}: ${ACRONYMS[acronymText]}`, { fontSize: '24px', fill: '#fff' })
+        const expandedText = this.add.text(400, 300, `${acronymText}: ${ACRONYMS[acronymText]}`, { fontSize: '24px', fill: '#fff' })
             .setOrigin(0.5)
             .setDepth(1);
 
@@ -120,29 +122,34 @@
 
     function createMaze(scene) {
         const mazeLayout = [
-            "XXXXXXXXXXXXXXXXXXXXX",
-            "X         X         X",
-            "X XXX XXX X XXX XXX X",
-            "X X   X   X   X   X X",
-            "X X X X XXXXX X X X X",
-            "X   X X       X X   X",
-            "XXXXX X XXXXX X XXXXX",
-            "X     X   X   X     X",
-            "X XXX XXX X XXX XXX X",
-            "X X     X   X     X X",
-            "X X XXX X X X XXX X X",
-            "X X   X X X X X   X X",
-            "X XXX X X X X X XXX X",
-            "X     X   X   X     X",
-            "XXXXXXXXXXXXXXXXXXXXX"
+            "XXXXXXXXXXXXXXXXXXXXXXX",
+            "X         X           X",
+            "X XXXXXXX X XXXXXXXXX X",
+            "X X     X X X       X X",
+            "X X XXX X X X XXXXX X X",
+            "X X X X   X     X X   X",
+            "X X X XXXXXXXXX X XXXXX",
+            "X X X       X   X     X",
+            "X X XXXXXXX X XXXXXXX X",
+            "X X       X X       X X",
+            "X XXXXXXX X X XXXXX X X",
+            "X       X   X     X   X",
+            "XXXXXXX XXXXX XXX XXXXX",
+            "X     X       X       X",
+            "XXXXXXXXXXXXXXXXXXXXXXX"
         ];
 
         const tileSize = 40;
+        const wallThickness = 4; // Thin walls
+
         mazeLayout.forEach((row, y) => {
             for (let x = 0; x < row.length; x++) {
                 if (row[x] === 'X') {
                     const wall = scene.add.rectangle(x * tileSize, y * tileSize, tileSize, tileSize, 0x0000FF);
+                    wall.setOrigin(0);
                     walls.add(wall);
+                    wall.body.setSize(wallThickness, wallThickness);
+                    wall.body.setOffset((tileSize - wallThickness) / 2, (tileSize - wallThickness) / 2);
                 }
             }
         });
@@ -151,8 +158,8 @@
     function getRandomPosition(scene) {
         let x, y;
         do {
-            x = Phaser.Math.Between(0, 19) * 40 + 20;
-            y = Phaser.Math.Between(0, 14) * 40 + 20;
+            x = Phaser.Math.Between(1, 23) * 40 - 20;
+            y = Phaser.Math.Between(1, 13) * 40 - 20;
         } while (isPositionOccupied(scene, x, y));
         return { x, y };
     }
