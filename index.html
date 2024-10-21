@@ -1,0 +1,109 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Frog Acronym Game</title>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/phaser/3.55.2/phaser.min.js"></script>
+    <style>
+        body { margin: 0; display: flex; justify-content: center; align-items: center; height: 100vh; background: #f0f0f0; }
+    </style>
+</head>
+<body>
+    <script>
+    const config = {
+        type: Phaser.AUTO,
+        width: 800,
+        height: 600,
+        scene: {
+            preload: preload,
+            create: create,
+            update: update
+        },
+        physics: {
+            default: 'arcade',
+            arcade: {
+                gravity: { y: 0 }
+            }
+        }
+    };
+
+    const game = new Phaser.Game(config);
+    let frog;
+    let acronyms;
+    let cursors;
+    let scoreText;
+    let score = 0;
+
+    const ACRONYMS = {
+        'RPM': 'Regional Partner Marketing',
+        'CPU': 'Central Processing Unit',
+        'NASA': 'National Aeronautics and Space Administration',
+        'ASAP': 'As Soon As Possible',
+        'DIY': 'Do It Yourself'
+    };
+
+    function preload() {
+        this.load.image('frog', 'https://examples.phaser.io/assets/sprites/mushroom2.png');
+        this.load.image('acronym', 'https://examples.phaser.io/assets/sprites/star.png');
+    }
+
+    function create() {
+        frog = this.physics.add.sprite(400, 300, 'frog');
+        frog.setCollideWorldBounds(true);
+
+        acronyms = this.physics.add.group();
+        Object.keys(ACRONYMS).forEach(acronym => {
+            const x = Phaser.Math.Between(50, 750);
+            const y = Phaser.Math.Between(50, 550);
+            const acronymSprite = acronyms.create(x, y, 'acronym');
+            acronymSprite.setData('acronym', acronym);
+        });
+
+        this.physics.add.overlap(frog, acronyms, collectAcronym, null, this);
+
+        cursors = this.input.keyboard.createCursorKeys();
+
+        scoreText = this.add.text(16, 16, 'Score: 0', { fontSize: '32px', fill: '#000' });
+    }
+
+    function update() {
+        if (cursors.left.isDown) {
+            frog.setVelocityX(-160);
+        } else if (cursors.right.isDown) {
+            frog.setVelocityX(160);
+        } else {
+            frog.setVelocityX(0);
+        }
+
+        if (cursors.up.isDown) {
+            frog.setVelocityY(-160);
+        } else if (cursors.down.isDown) {
+            frog.setVelocityY(160);
+        } else {
+            frog.setVelocityY(0);
+        }
+    }
+
+    function collectAcronym(frog, acronym) {
+        const acronymText = acronym.getData('acronym');
+        acronym.disableBody(true, true);
+        score += 10;
+        scoreText.setText('Score: ' + score);
+        
+        this.add.text(400, 300, `${acronymText}: ${ACRONYMS[acronymText]}`, { fontSize: '24px', fill: '#000' })
+            .setOrigin(0.5)
+            .setDepth(1);
+
+        this.time.delayedCall(2000, () => {
+            this.tweens.add({
+                targets: this.children.list[this.children.list.length - 1],
+                alpha: 0,
+                duration: 1000,
+                ease: 'Power2'
+            });
+        });
+    }
+    </script>
+</body>
+</html>
